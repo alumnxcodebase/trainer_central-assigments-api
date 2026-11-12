@@ -6,6 +6,7 @@ from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from pymongo import MongoClient, DESCENDING
 
@@ -71,8 +72,8 @@ def insert(text: str, sender: str):
     return serialize(doc)
 
 
-@app.get("/")
-def root():
+@app.get("/health")
+def health():
     return {"status": "ok", "docs": "/docs"}
 
 
@@ -138,3 +139,9 @@ def delete_entry(entry_id: str):
     if entries.delete_one({"_id": oid}).deleted_count == 0:
         raise HTTPException(404, "Not found")
     return {"deleted": entry_id}
+
+
+# Serve the built React dashboard at "/" (must be mounted last)
+DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.isdir(DIST):
+    app.mount("/", StaticFiles(directory=DIST, html=True), name="dashboard")

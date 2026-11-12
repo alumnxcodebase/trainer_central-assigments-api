@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Production build is served by the API itself -> same origin
+const API = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
 
 export default function App() {
   const [items, setItems] = useState([]);
