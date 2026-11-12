@@ -15,6 +15,8 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME", "textdash")
 API_KEY = os.getenv("API_KEY", "")  # if set, required for POSTs (header: X-API-Key)
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+# Reject posts where the learner's name (sender) does not appear in the text
+REQUIRE_NAME_IN_TEXT = os.getenv("REQUIRE_NAME_IN_TEXT", "true").lower() == "true"
 
 if not MONGODB_URI:
     raise RuntimeError("Set MONGODB_URI in backend/.env (see .env.example)")
@@ -34,7 +36,7 @@ app.add_middleware(
 
 class EntryIn(BaseModel):
     text: str = Field(..., min_length=1, max_length=10000)
-    sender: Optional[str] = Field(None, max_length=100)
+    sender: str = Field(..., min_length=2, max_length=100, description="Learner name")
 
 
 def check_key(x_api_key: Optional[str] = Header(None)):
@@ -51,7 +53,15 @@ def serialize(doc):
     }
 
 
-def insert(text: str, sender: Optional[str]):
+def insert(text: str, sender: str):
+    sender = sender.strip()
+    if REQUIRE_NAME_IN_TEXT:
+        low = text.lower()
+        tokens = [t for t in sender.lower().split() if len(t) >= 2]
+        if not tokens or not all(t in low for t in tokens):
+            raise HTTPException(
+                422, f"Learner name '{sender}' not found in the text; not stored."
+            )
     doc = {
         "text": text,
         "sender": sender,
@@ -73,7 +83,7 @@ def create_entry(body: EntryIn):
 
 
 @app.post("/api/text", status_code=201, dependencies=[Depends(check_key)])
-async def create_raw(request: Request, sender: Optional[str] = None):
+async def create_raw(request: Request, sender: str):
     """Raw text body (Content-Type: text/plain). Optional ?sender=name"""
     text = (await request.body()).decode("utf-8", errors="replace").strip()
     if not text:
