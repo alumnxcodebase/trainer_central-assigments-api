@@ -24,3 +24,4 @@ table { width:100%; border-collapse:collapse; margin-top:8px; }
 th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
 th { color:var(--muted); font-weight:500; font-size:.85rem; }
 .nowrap { white-space:nowrap; } .text { white-space:pre-wrap; word-break:break-word; }
+.done { color:#1a9f55; font-weight:600; }

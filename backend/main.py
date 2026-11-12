@@ -100,6 +100,25 @@ def list_entries(limit: int = 100, skip: int = 0, q: Optional[str] = None):
     return {"total": entries.count_documents(query), "items": [serialize(d) for d in docs]}
 
 
+@app.get("/api/learners")
+def learners():
+    """One row per learner who has posted at least once."""
+    rows = entries.aggregate(
+        [
+            {"$group": {
+                "_id": {"$ifNull": ["$sender", "anonymous"]},
+                "submissions": {"$sum": 1},
+                "last": {"$max": "$created_at"}}},
+            {"$sort": {"last": -1}},
+        ]
+    )
+    items = [
+        {"learner": r["_id"], "submissions": r["submissions"], "last": r["last"].isoformat()}
+        for r in rows
+    ]
+    return {"total": len(items), "items": items}
+
+
 @app.get("/api/stats")
 def stats():
     total = entries.count_documents({})
